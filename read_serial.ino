@@ -13,10 +13,10 @@ void loop() {
   inStr = Serial.readString();
   inStr.trim();
 
-  int values[5];
+  int percentValues[5];
   for (int i = 0; i < 5; i++) {
     String num = inStr.substring(2*i, 2*i+1);
-    values[i] = num.toInt();
+    percentValues[i] = num.toInt();
   }
 
   // Now we need to convert the percentage values to servo values
