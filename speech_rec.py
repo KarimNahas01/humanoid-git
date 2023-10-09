@@ -18,7 +18,7 @@ class SpeechRecognition:
         self.wake_up_command = "Hey Robot"
         self.list_of_commands = []
 
-        with open('commands.csv', 'r') as file:
+        with open('speech_commands.csv', 'r') as file:
             csv_reader = csv.reader(file)
             self.list_of_commands.extend(row for row in csv_reader)        
 
