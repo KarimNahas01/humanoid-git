@@ -10,7 +10,6 @@ class SerialConnection:
     def write_read(self, x):
         self.arduino.write(bytes(x, 'utf-8'))
         time.sleep(0.05)
-        # data = arduino.readline()
         data = self.read_until()
         return data
 
@@ -21,14 +20,15 @@ class SerialConnection:
             data = self.arduino.readline()
             all_data += data
 
-        return all_data
+        return str(all_data, "utf-8")
 
     def send_hand_pos(self, fingers_pos):
         data = self.encode_hand(fingers_pos)
         self.arduino.write(bytes(data, 'utf-8'))
         print(self.read_until("**"))
 
-    def encode_hand(self, fingers_pos):
+    @staticmethod
+    def encode_hand(fingers_pos):
         string = ""
         for i in fingers_pos:
             if i < 0:
@@ -52,6 +52,8 @@ class SerialConnection:
             # value = self.write_read(num)
             # print(value)
             self.send_hand_pos([num1, num2, num3, num4, num5])
+            print("\n")
+            print(self.read_until("**"))
 
 
 if __name__ == "__main__":
