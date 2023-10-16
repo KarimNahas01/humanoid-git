@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 import mediapipe as mp
+import time
 
 # import matplotlib.pyplot as plt
 
@@ -154,13 +155,30 @@ class HandTracker:
 
     def snapshot_capture(self, debug=True):
         cap = cv2.VideoCapture(0)
-        success, image = cap.read()
-        image = cv2.flip(image, 1)
-        lm_list = self.position_finder(image, hand_label="Right")
+        started_timer = time.time()
+        while True:
+            counter_limit = 4
+            success, image = cap.read()
+            image = cv2.flip(image, 1)
+            image = cv2.putText(image, str(round(counter_limit - (time.time()-started_timer))), (image.shape[1] - 75, 75), cv2.FONT_HERSHEY_SIMPLEX, 3, (255, 0, 0), 4, cv2.LINE_AA)
 
-        if debug:
-            cv2.imshow("Video", image)
-            cv2.waitKey(500)
+            if debug:
+                cv2.imshow("Video", image)
+                cv2.waitKey(1)
+                if time.time() - started_timer > counter_limit:
+                    white_image = 255 * np.ones_like(image)
+                    old_image = image.copy()
+                    image = cv2.addWeighted(image, 0.5, white_image, 0.5, 0)
+                    cv2.imshow("Video", image)
+                    cv2.waitKey(100)
+                    image = old_image
+                    lm_list = self.position_finder(image, hand_label="Right")
+                    cv2.imshow("Video", image)
+                    cv2.waitKey(1000)
+
+            if time.time() - started_timer > counter_limit:
+                cv2.destroyAllWindows()
+                break
 
         return lm_list
 

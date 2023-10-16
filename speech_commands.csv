@@ -1,4 +1,3 @@
-replicate my hand,Certainly aim your hand towards the camera and I will replicate it!
-show me a letter,This is letter G in sign language. 
-show me a number,This is number 5 in sign language.
-what character is this,Thinking... That is the letter U.
+replicate,Replicate my hand,Certainly aim your hand towards the camera and I will replicate it!
+show,Show me a character,This is character _ in sign language.,I don't know how to represent character _ yet. 
+knowledge,Do you know this sign,Thinking... That is the character _.,No I don't know that sign yet.
