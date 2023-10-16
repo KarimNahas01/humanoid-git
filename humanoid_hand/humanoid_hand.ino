@@ -1,11 +1,12 @@
 #include <Servo.h>
 
 const int N = 5;
-const int fingerComplete[N] = {2000, 3000, 3000, 3000, 3000};
-const float fingerRatioUp[N] = {0.1, 0.1, 0.1, 0.1, 0.1};
-const int vStop[N] = {90, 90, 90, 90, 90};
+const int fingerComplete[N] = {2100, 2100, 1800, 1800, 1800};
+const float fingerRatioUp[N] = {0.7, 0.85, 0.82, 0.87, 0.78};
+const int vStop[N] = {89, 89, 90, 88, 87};
 const int vClose = 180;
 const int vOpen = 0;
+const int pins[N] = {3, 5, 6, 9, 10};
 
 String inStr = "";
 
@@ -20,48 +21,72 @@ void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
 
+  for(int i =0; i < N; i++){
+    servos[i].attach(pins[i]);
+  }
+
   // TODO: Calibrate hand everytime arduino restarts? Closing hand fully no matter position and then opening it.
 
   stopFingers();
-  
+
   Serial.print("Setup complete");
 
 }
 
 void loop() {
   while (Serial.available() > 0) {
-  
+
     inStr = Serial.readStringUntil('\n');
     inStr.trim();
-  
+
     decodeInput(inStr);
-    
+
     Serial.print(inStr);
     Serial.print("**");
 
     moveFingers();
   }
-  
+
 }
 
 void decodeInput(String inputString){
   int percentValues[N];
+  float ratio;
+  int newPos;
   for (int i = 0; i < N; i++) {
     String num = inputString.substring(2*i, 2*i+2);
     percentValues[i] = num.toInt();
-    
+
     Serial.print("Finger ");
     Serial.print(i);
     Serial.print(" = ");
     Serial.print(percentValues[i]);
     Serial.print("\t");
-    
+
+    //Serial.print(" Complete ");
+    //Serial.print(fingerComplete[i]);
+
     // Converting the percentage values to servo values
-    int newPos = int(round(fingerComplete[i] * percentValues[i] / 99));
+    ratio = percentValues[i] / 99.0;
+
+    Serial.print(" Ratio ");
+    Serial.print(ratio);
+
+    newPos = int(fingerComplete[i] * ratio);
+
+    Serial.print(" NewPos ");
+    Serial.print(newPos);
+    //Serial.print(" OldPos ");
+    //Serial.print(servoValues[i]);
+
     float servoDelay = newPos - servoValues[i];
     if (servoDelay < 0){
-      servoDelay = int(round(servoDelay * fingerRatioUp[i]));
+      servoDelay = int(servoDelay * fingerRatioUp[i]);
     }
+
+    //Serial.print(" Delay ");
+    //Serial.print(servoDelay);
+
     servoDelays[i] = servoDelay;
     servoValues[i] = newPos;
     
