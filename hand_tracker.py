@@ -160,7 +160,7 @@ class HandTracker:
             counter_limit = 4
             success, image = cap.read()
             image = cv2.flip(image, 1)
-            image = cv2.putText(image, str(round(counter_limit - (time.time()-started_timer))), (image.shape[1] - 75, 75), cv2.FONT_HERSHEY_SIMPLEX, 3, (255, 0, 0), 4, cv2.LINE_AA)
+            image = cv2.putText(image, str(round(counter_limit - (time.time()-started_timer))), (image.shape[1] - 75, 75), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 255), 4, cv2.LINE_AA)
 
             if debug:
                 cv2.imshow("Video", image)
