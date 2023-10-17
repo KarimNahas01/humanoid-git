@@ -37,7 +37,7 @@ class SerialConnection:
             elif i > 99:
                 i = 99
 
-            string += str(i).zfill(2)
+            string += str(int(i)).zfill(2)
         return string
 
     def main(self):
@@ -59,3 +59,7 @@ class SerialConnection:
 
 if __name__ == "__main__":
     SerialConnection().main()
+
+# 50 0 0 99 99      H
+# 99 99 99 99 99    E
+# 0 99 99 99 0      Y
