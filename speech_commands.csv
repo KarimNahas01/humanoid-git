@@ -1,3 +1,4 @@
 replicate,Replicate my hand,Certainly aim your hand towards the camera and I will replicate it!
 show,Show me a character,This is character _ in sign language.,I don't know how to represent character _ yet. 
-knowledge,Do you know this sign,Thinking... That is the character _.,No I don't know that sign yet. Do you want to add it?,Alright I stored that as character _.
+knowledge,Do you know this sign,That is the character _.,No I don't know that sign yet. Do you want to add it?,Alright I stored that as character _.
+words,Spell this word,This spells out _.,Sorry I cannot display the word "_" please try another word. (A simple one please)

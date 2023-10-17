@@ -5,7 +5,7 @@ import time
 class SerialConnection:
 
     def __init__(self):
-        self.arduino = serial.Serial(port='/dev/ttyACM0', baudrate=9600, timeout=.1)
+        self.arduino = serial.Serial(port='COM4', baudrate=9600, timeout=.1)
 
     def write_read(self, x):
         self.arduino.write(bytes(x, 'utf-8'))
@@ -22,11 +22,14 @@ class SerialConnection:
 
         return str(all_data, "utf-8")
 
-    def send_hand_pos(self, fingers_pos):
+    def send_hand_pos(self, fingers_pos, debug=True):
         data = self.encode_hand(fingers_pos)
         self.arduino.write(bytes(data, 'utf-8'))
 
-        print(self.read_until("**"))
+        if debug:
+            print(self.read_until("**"))
+        else:
+            self.read_until("**")
 
     @staticmethod
     def encode_hand(fingers_pos):

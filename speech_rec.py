@@ -2,6 +2,7 @@ import csv
 import warnings
 import pyttsx3
 import os
+import time
 
 from whisper_mic.whisper_mic import WhisperMic
 from hand_tracker import HandTracker
@@ -20,7 +21,8 @@ class SpeechRecognition:
         self.mic = WhisperMic(english=True)
         self.engine = pyttsx3.init()
 
-        self.voice = self.engine.getProperty('voices')[12]
+        # self.voice = self.engine.getProperty('voices')[12] # Linux (Alberto)
+        self.voice = self.engine.getProperty('voices')[1] # Windows (Karim)
         self.engine.setProperty('voice', self.voice.id)
 
         self.wake_up_command = "Hey Robot"
@@ -58,6 +60,8 @@ class SpeechRecognition:
                     self.show_character(self.commands_list[command_found])
                 elif command == 'knowledge':
                     self.knowledge_check(self.commands_list[command_found])
+                elif command == 'words':
+                    self.spell_word(self.commands_list[command_found])
 
                 # self.say(self.commands_list[command_found][1])
                 self.say("Anything else? Simply say Yes or No")
@@ -73,7 +77,7 @@ class SpeechRecognition:
                     self.do_something()
                 else:
                     self.say("Alright, bye!")
-                    exit(0)
+                    self.exit_program()
             self.say("I'm sorry I didn't understand that.")
 
     def get_char_in(self, input_char):
@@ -105,7 +109,7 @@ class SpeechRecognition:
         fingers_pos = self.get_camera_capture()
         fingers_pos = [int(float(pos)*100) for pos in fingers_pos]
         if self.serial_flag:
-            self.serial_connection.send_hand_pos(fingers_pos)
+            self.send_hand_positions(fingers_pos)
         # print(fingers_pos)
 
     def show_character(self, command_data):
@@ -123,14 +127,15 @@ class SpeechRecognition:
                     fingers_pos = row[1:]
             fingers_pos = [int(float(pos) * 100) for pos in fingers_pos]
             if self.serial_flag:
-                self.serial_connection.send_hand_pos(fingers_pos)
-            print(fingers_pos)
+                self.send_hand_positions(fingers_pos)
+            # print(fingers_pos)
 
         else:
             output = command_data[3].replace('_', char_in.upper())
             self.say(output)
         
     def knowledge_check(self, command_data):
+        self.say("Aim your hand towards the camera.")
         fingers_pos = self.get_camera_capture()
         # print("Finger pos: ", [float(pos) for pos in fingers_pos])
         filtered_servos_list = {row[0]: [float(num) for num in row[1:]]
@@ -144,16 +149,19 @@ class SpeechRecognition:
         # print("Min difference:", total_difference)
 
         if total_difference < 1:
+            self.say("Thinking...")
+            time.sleep(1)
             output = command_data[2].replace('_', closest_entry[0].upper())
             self.say(output)
         else:
             self.say(command_data[3])
-            input_text = "yes"
+            input_text = ""
             while "yes" not in input_text and "no" not in input_text.lower():
                 input_text = self.input_listen()
             if "yes" in input_text:
                 self.say("What character is this?")
-                char_in = self.get_char_in(input_text)
+                input_char = self.input_listen()
+                char_in = self.get_char_in(input_char)
                 # char_in = "Z" # Used for testing
                 if char_in in stored_char_list:
                     self.say(f"Character {char_in.upper()} already exists, do you want to override it?")
@@ -169,6 +177,33 @@ class SpeechRecognition:
 
         return
 
+    def spell_word(self, command_data):
+        stored_char_list = {row[0]: row[1:] for (i, row) in enumerate(self.servos_ratio_list) if row[1] != '-'}
+
+        self.say("Certainly, what word do you want me to spell.")
+        valid_chars = False
+        while not valid_chars:
+            valid_chars = True
+            input_word = self.input_listen().split()[0]
+            for char in input_word:
+                if char.upper() not in stored_char_list:
+                    self.say(command_data[3].replace('_', input_word))
+                    valid_chars = False
+                    break
+        self.say("Spelling...")
+
+        for char in input_word:
+            self.say(char.upper())
+            for row in self.servos_ratio_list:
+                if row[0] == char.upper():
+                    fingers_pos = row[1:]
+            fingers_pos = [int(float(pos) * 100) for pos in fingers_pos]
+            if self.serial_flag:
+                self.send_hand_positions(fingers_pos)
+                time.sleep(1)
+        self.say(command_data[2].replace('_', input_word))
+        return
+
     @staticmethod
     def calculate_total_difference(fingers_pos, entry):
         return sum(abs(float(a) - float(b)) for a, b in zip(fingers_pos, entry))
@@ -180,7 +215,6 @@ class SpeechRecognition:
         return filtered_input.lower()
 
     def get_camera_capture(self):
-        self.say('Aim your hand towards the camera')
 
         while True:
             lm_list = self.hand_tracker.snapshot_capture()
@@ -190,6 +224,23 @@ class SpeechRecognition:
                 self.say('Please show your right hand.')
 
         return [round(finger[2] * 10) / 10 for finger in lm_list[0]]
+
+    def send_hand_positions(self, fingers_pos, debug=False):
+        pos_list = [0,0,0,0,0]
+        
+        for i, pos in enumerate(fingers_pos):
+            pos_list[i] = pos
+            # print(pos_list)
+            self.serial_connection.send_hand_pos(pos_list, debug=debug)
+            time.sleep(0.1)
+        
+        time.sleep(3)
+
+        for i in reversed(range(5)):
+            pos_list[i] = 0
+            # print(pos_list)
+            self.serial_connection.send_hand_pos(pos_list, debug=debug)
+
 
     def input_listen(self, do_print=True):
         input_text = self.mic.listen()
@@ -203,12 +254,28 @@ class SpeechRecognition:
         print(name + text + new_line)
         self.engine.say(text)
         self.engine.runAndWait()
+    
+    def exit_program(self):
+        self.send_hand_positions([0, 0, 0, 0, 0])
+        time.sleep(1)
+        exit(0)
 
+def test_hand(sr):
+    while True:
+        test_pos = [0, 0, 0, 0, 0]
+        test_pos[0] = int(input("Thumb: "))
+        test_pos[1] = int(input("Index: "))
+        test_pos[2] = int(input("Middle: "))
+        test_pos[3] = int(input("Ring: "))
+        test_pos[4] = int(input("Pinky: "))
+        print("")
+        sr.send_hand_positions(test_pos)
 
 def main():
     sr = SpeechRecognition()
-    os.system('clear')
+    os.system('cls')
     req_met = False
+    # test_hand(sr) # Method used for manual inputs
     
     # sr.doSomething() # Skips the start, used for testing
 
