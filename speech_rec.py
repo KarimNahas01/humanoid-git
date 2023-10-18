@@ -80,11 +80,15 @@ class SpeechRecognition:
                     self.exit_program()
             self.say("I'm sorry I didn't understand that.")
 
-    def get_char_in(self, input_char):
+    def get_char_in(self):
         char_index = []
+        input_char = self.input_listen(do_print=False).split()[0]
         while len(char_index) == 0:
             char_index = [i for i, row in enumerate(self.close_words)
                           if input_char.lower() in row or input_char.upper() in row]
+            time.sleep(0.1)
+            print("input_char:", input_char)
+            print("char_index:", char_index)
             if len(char_index) == 0:
                 self.say("I'm sorry I didn't understand that.")
                 input_char = self.input_listen(do_print=False).split()[0]
@@ -106,14 +110,29 @@ class SpeechRecognition:
     def replicate_hand(self, command_data):
         self.say(command_data[2])
         fingers_pos = self.get_camera_capture()
-        fingers_pos = [int(float(pos)*100) for pos in fingers_pos]
-        self.send_hand_positions(fingers_pos)
+        fingers_pos_percent = [int(float(pos)*100) for pos in fingers_pos]
+        self.send_hand_positions(fingers_pos_percent)
+
+        self.say(command_data[3])
+        char_in = self.get_char_in()
+        stored_char_list = {row[0]: row[1:] for (i, row) in enumerate(self.servos_ratio_list) if row[1] != '-'}
+
+        if char_in in stored_char_list:
+            self.say(f"Character {char_in.upper()} already exists, do you want to override it?")
+            input_text = ""
+            while "yes" not in input_text and "no" not in input_text.lower():
+                input_text = self.input_listen()
+            if "no" in input_text:
+                return
+
+        self.store_finger_values(char_in, fingers_pos)
+        output = command_data[4].replace('_', char_in[0].upper())
+        self.say(output)
 
     def show_character(self, command_data):
         self.say("What character would you want me to show?")
-        input_char = self.input_listen(do_print=False).split()[0]
 
-        char_in = self.get_char_in(input_char)
+        char_in = self.get_char_in()
         stored_char_list = {row[0]: row[1:] for (i, row) in enumerate(self.servos_ratio_list) if row[1] != '-'}
         if char_in in stored_char_list:
             output = command_data[2].replace('_', char_in.upper())
@@ -150,8 +169,7 @@ class SpeechRecognition:
                 input_text = self.input_listen()
             if "yes" in input_text:
                 self.say("What character is this?")
-                input_char = self.input_listen()
-                char_in = self.get_char_in(input_char)
+                char_in = self.get_char_in()
                 if char_in in stored_char_list:
                     self.say(f"Character {char_in.upper()} already exists, do you want to override it?")
                     input_text = ""
