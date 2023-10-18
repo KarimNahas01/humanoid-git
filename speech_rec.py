@@ -11,7 +11,7 @@ from serial_connection import SerialConnection
 
 class SpeechRecognition:
     def __init__(self):
-        self.serial_flag = False
+        self.serial_flag = True
         self.use_mic = True
 
         warnings.filterwarnings("ignore")
@@ -30,6 +30,7 @@ class SpeechRecognition:
         self.commands_list = []
         self.servos_ratio_list = []
         self.close_words = []
+        self.current_fingers_pos = [0, 0, 0, 0, 0]
 
         with open('speech_commands.csv', 'r') as file:
             csv_reader = csv.reader(file)
@@ -86,9 +87,6 @@ class SpeechRecognition:
         while len(char_index) == 0:
             char_index = [i for i, row in enumerate(self.close_words)
                           if input_char.lower() in row or input_char.upper() in row]
-            time.sleep(0.1)
-            print("input_char:", input_char)
-            print("char_index:", char_index)
             if len(char_index) == 0:
                 self.say("I'm sorry I didn't understand that.")
                 input_char = self.input_listen(do_print=False).split()[0]
@@ -231,21 +229,29 @@ class SpeechRecognition:
 
         return [round(finger[2] * 10) / 10 for finger in lm_list[0]]
 
-    def send_hand_positions(self, fingers_pos, debug=False):
-        pos_list = [0,0,0,0,0]
-        if self.serial_flag:
-            for i, pos in enumerate(fingers_pos):
-                pos_list[i] = pos
-                self.serial_connection.send_hand_pos(pos_list, debug=debug)
-                time.sleep(0.1)
-            
-            time.sleep(3)
+    def send_hand_positions(self, target_fingers_pos, debug=False):
+        current_fingers_pos = self.current_fingers_pos
+        
+        for i, target_pos in enumerate(target_fingers_pos):
+            if target_pos == current_fingers_pos[i]:
+                continue
+            current_fingers_pos[i] = target_pos
+            if self.serial_flag:
+                self.serial_connection.send_hand_pos(current_fingers_pos, debug=debug)
+            else:
+                print(current_fingers_pos)
+            time.sleep(0.1)
+        
+        time.sleep(3)
 
-            for i in reversed(range(5)):
-                pos_list[i] = 0
-                self.serial_connection.send_hand_pos(pos_list, debug=debug)
-        else:
-            print(fingers_pos)
+        for i in reversed(range(5)):
+            if current_fingers_pos[i] == 0:
+                continue
+            current_fingers_pos[i] = 0
+            if self.serial_flag:
+                self.serial_connection.send_hand_pos(current_fingers_pos, debug=debug)
+            else:
+                print(current_fingers_pos)
 
 
     def input_listen(self, do_print=True):
