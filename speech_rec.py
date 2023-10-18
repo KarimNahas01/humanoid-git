@@ -11,7 +11,8 @@ from serial_connection import SerialConnection
 
 class SpeechRecognition:
     def __init__(self):
-        self.serial_flag = True
+        self.serial_flag = False
+        self.use_mic = True
 
         warnings.filterwarnings("ignore")
         self.hand_tracker = HandTracker()
@@ -63,7 +64,6 @@ class SpeechRecognition:
                 elif command == 'words':
                     self.spell_word(self.commands_list[command_found])
 
-                # self.say(self.commands_list[command_found][1])
                 self.say("Anything else? Simply say Yes or No")
                 input_text = ""
                 while "yes" not in input_text and "no" not in input_text.lower():
@@ -89,7 +89,6 @@ class SpeechRecognition:
                 self.say("I'm sorry I didn't understand that.")
                 input_char = self.input_listen(do_print=False).split()[0]
                 print("You -", input_char)
-                # input_char = 'weight this test'.split()[0] # Used for testing
 
         char_in = self.close_words[char_index[0]][0]
         print("You -", char_in.upper())
@@ -108,14 +107,11 @@ class SpeechRecognition:
         self.say(command_data[2])
         fingers_pos = self.get_camera_capture()
         fingers_pos = [int(float(pos)*100) for pos in fingers_pos]
-        if self.serial_flag:
-            self.send_hand_positions(fingers_pos)
-        # print(fingers_pos)
+        self.send_hand_positions(fingers_pos)
 
     def show_character(self, command_data):
         self.say("What character would you want me to show?")
         input_char = self.input_listen(do_print=False).split()[0]
-        # input = 'F' # Used for testing
 
         char_in = self.get_char_in(input_char)
         stored_char_list = {row[0]: row[1:] for (i, row) in enumerate(self.servos_ratio_list) if row[1] != '-'}
@@ -126,9 +122,7 @@ class SpeechRecognition:
                 if row[0] == char_in.upper():
                     fingers_pos = row[1:]
             fingers_pos = [int(float(pos) * 100) for pos in fingers_pos]
-            if self.serial_flag:
-                self.send_hand_positions(fingers_pos)
-            # print(fingers_pos)
+            self.send_hand_positions(fingers_pos)
 
         else:
             output = command_data[3].replace('_', char_in.upper())
@@ -137,16 +131,12 @@ class SpeechRecognition:
     def knowledge_check(self, command_data):
         self.say("Aim your hand towards the camera.")
         fingers_pos = self.get_camera_capture()
-        # print("Finger pos: ", [float(pos) for pos in fingers_pos])
         filtered_servos_list = {row[0]: [float(num) for num in row[1:]]
                                 for row in self.servos_ratio_list if row[1] != '-'}
         closest_entry = min(filtered_servos_list.items(),
                             key=lambda x: self.calculate_total_difference(fingers_pos, x[1]))
         total_difference = self.calculate_total_difference(fingers_pos, closest_entry[1])
         stored_char_list = {row[0]: row[1:] for (i, row) in enumerate(self.servos_ratio_list) if row[1] != '-'}
-
-        # print("Closest Entry:", closest_entry)
-        # print("Min difference:", total_difference)
 
         if total_difference < 1:
             self.say("Thinking...")
@@ -162,7 +152,6 @@ class SpeechRecognition:
                 self.say("What character is this?")
                 input_char = self.input_listen()
                 char_in = self.get_char_in(input_char)
-                # char_in = "Z" # Used for testing
                 if char_in in stored_char_list:
                     self.say(f"Character {char_in.upper()} already exists, do you want to override it?")
                     input_text = ""
@@ -198,9 +187,8 @@ class SpeechRecognition:
                 if row[0] == char.upper():
                     fingers_pos = row[1:]
             fingers_pos = [int(float(pos) * 100) for pos in fingers_pos]
-            if self.serial_flag:
-                self.send_hand_positions(fingers_pos)
-                time.sleep(1)
+            self.send_hand_positions(fingers_pos)
+            time.sleep(1)
         self.say(command_data[2].replace('_', input_word))
         return
 
@@ -227,23 +215,26 @@ class SpeechRecognition:
 
     def send_hand_positions(self, fingers_pos, debug=False):
         pos_list = [0,0,0,0,0]
-        
-        for i, pos in enumerate(fingers_pos):
-            pos_list[i] = pos
-            # print(pos_list)
-            self.serial_connection.send_hand_pos(pos_list, debug=debug)
-            time.sleep(0.1)
-        
-        time.sleep(3)
+        if self.serial_flag:
+            for i, pos in enumerate(fingers_pos):
+                pos_list[i] = pos
+                self.serial_connection.send_hand_pos(pos_list, debug=debug)
+                time.sleep(0.1)
+            
+            time.sleep(3)
 
-        for i in reversed(range(5)):
-            pos_list[i] = 0
-            # print(pos_list)
-            self.serial_connection.send_hand_pos(pos_list, debug=debug)
+            for i in reversed(range(5)):
+                pos_list[i] = 0
+                self.serial_connection.send_hand_pos(pos_list, debug=debug)
+        else:
+            print(fingers_pos)
 
 
     def input_listen(self, do_print=True):
-        input_text = self.mic.listen()
+        if self.use_mic:
+            input_text = self.mic.listen()
+        else:
+            input_text = " " + input("Input: ")
         if do_print: 
             print("You -" + input_text)
         filtered_input = self.filter_input(input_text)
